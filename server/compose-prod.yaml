@@ -4,10 +4,11 @@ services:
     depends_on:
       - user-links
     build:
-      context: ./web-ui/.
+      context: .
+      dockerfile: ./web-ui/Dockerfile
     container_name: web-ui
     networks:
-      - link-share-net
+      - front-end-net
     ports:
       - "8080:8080"
 
@@ -15,26 +16,31 @@ services:
     depends_on:
       - user-links-db
     build:
-      context: ./user-links/.
+      context: .
+      dockerfile: ./user-links/Dockerfile
     container_name: user-links
     networks:
-      - link-share-net
+      - front-end-net
+      - user-links-net
     environment:
-      - POSTGRES_PASSWORD=${LINK_SHARE_DB_SUPERUSER:?database password not set}
+      - DB_PASSWORD=${LINK_SHARE_DB_PASSWORD:?database password not set}
 
   user-links-db:
     image: postgres:18.4
     container_name: user-links-db
     networks:
-      - link-share-net
+      - user-links-net
     environment:
       POSTGRES_PASSWORD: ${LINK_SHARE_DB_PASSWORD:?database password not set}
     volumes:
+      - ./user-links/init-db-base:/docker-entrypoint-initdb.d
       - user-links-volume:/var/lib/postgresql
 
 volumes:
   user-links-volume:
 
 networks:
-  link-share-net:
+  front-end-net:
+    driver: bridge
+  user-links-net:
     driver: bridge
