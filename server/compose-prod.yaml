@@ -10,6 +10,7 @@ services:
     networks:
       - front-end-net
     ports:
+# Single access point, not other ports can be opened
       - "8080:8080"
 
   user-links:

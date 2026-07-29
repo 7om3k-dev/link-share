@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1
 
-# syntax=docker/dockerfile:1
-
 FROM golang:1.26.5
 LABEL authors="github.com/7om3k"
 
@@ -21,4 +19,4 @@ WORKDIR /app/web-ui
 # Binary is located in the root of the filesystem of the image
 RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-web-ui
 
-CMD ["/docker-web-ui"]
+CMD ["/app-web-ui"]

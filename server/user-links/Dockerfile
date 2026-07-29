@@ -6,7 +6,7 @@ LABEL authors="github.com/7om3k"
 WORKDIR /app
 
 # Docker's COPY command is quite sensitive in its interpretation of the trailing slash
-COPY ./applib/ ./applib/
+COPY ./applib ./applib/
 
 COPY ./user-links/go.mod ./user-links/
 COPY ./user-links/*.go ./user-links/

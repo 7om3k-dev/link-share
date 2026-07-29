@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 
 	"github.com/7om3k/link-share/applib/logger"
@@ -109,5 +108,5 @@ func main() {
 	}
 
 	serviceLogger.LogInfo(logger.MessageKey, "Starting web ui service")
-	log.Fatal(srv.ListenAndServe())
+	serviceLogger.LogFatalError(srv.ListenAndServe())
 }

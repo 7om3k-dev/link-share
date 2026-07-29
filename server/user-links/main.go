@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -60,7 +59,7 @@ func main() {
 	})
 
 	serviceLogger.LogInfo(logger.MessageKey, "Starting server")
-	log.Fatal(http.ListenAndServe(":5001", nil))
+	serviceLogger.LogFatalError(http.ListenAndServe(":5001", nil))
 }
 
 func userLinkHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -83,8 +82,8 @@ func userLinkHandler(ctx context.Context, w http.ResponseWriter, r *http.Request
 func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 	rows, err := db.Query(ctx, "SELECT id, title, description, url FROM link")
 	if err != nil {
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
-		serviceLogger.LogFatalError(logger.MessageKey, "Query error: "+err.Error())
+		http.Error(w, "Cannot get user links", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "Query error: "+err.Error())
 		return
 	}
 	defer rows.Close()
@@ -94,8 +93,8 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 		var link UserLink
 
 		if err := rows.Scan(&link.Id, &link.Title, &link.Description, &link.Url); err != nil {
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
-			serviceLogger.LogFatalError(logger.MessageKey, "Row scan error: "+err.Error())
+			http.Error(w, "Cannot serialize user links", http.StatusInternalServerError)
+			serviceLogger.LogError(logger.MessageKey, "Row scan error: "+err.Error())
 			return
 		}
 
@@ -103,8 +102,8 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 	}
 
 	if rows.Err() != nil {
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
-		serviceLogger.LogFatalError(logger.MessageKey, "rows error: "+rows.Err().Error())
+		http.Error(w, "Something went wrong while getting user links", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "rows error: "+rows.Err().Error())
 		return
 	}
 
@@ -117,8 +116,8 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(links); err != nil {
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
-		serviceLogger.LogFatalError(logger.MessageKey, "JSON encoding error: "+err.Error())
+		http.Error(w, "Cannot send json with user links", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "JSON encoding error: "+err.Error())
 		return
 	}
 }

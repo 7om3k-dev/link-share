@@ -23,6 +23,7 @@ services:
       - front-end-net
       - user-links-net
     ports:
+# Opened ports for easier debug, strictly not allowed in production
       - "5001:5001"
     environment:
       - DB_PASSWORD=${LINK_SHARE_DB_PASSWORD:?database password not set}
@@ -34,6 +35,7 @@ services:
     networks:
       - user-links-net
     ports:
+# Opened ports for easier debug, strictly not allowed in production
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: ${LINK_SHARE_DB_PASSWORD:?database password not set}

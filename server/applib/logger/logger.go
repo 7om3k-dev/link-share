@@ -11,11 +11,8 @@ type Logger struct {
 	serviceName string
 }
 
-var logger *Logger
-
 func NewAppLogger(serviceName string) *Logger {
-	logger = &Logger{serviceName: serviceName}
-	return logger
+	return &Logger{serviceName: serviceName}
 }
 
 func (l *Logger) LogInfo(args ...any) {
