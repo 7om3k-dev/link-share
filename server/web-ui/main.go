@@ -2,40 +2,53 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
-	"log"
 	"net/http"
-	"os"
+
+	"github.com/7om3k/link-share/applib/logger"
+)
+
+const serviceName = "web-ui"
+
+var (
+	serviceLogger *logger.Logger
 )
 
 func homePageHandler(w http.ResponseWriter, _ *http.Request) {
-	t, _ := template.ParseFiles("public/home.html")
+	t, _ := template.ParseFiles("pages/home.html")
 	t.Execute(w, nil)
 }
 
 func signInPageHandler(w http.ResponseWriter, _ *http.Request) {
-	t, _ := template.ParseFiles("public/sign-in.html")
+	t, _ := template.ParseFiles("pages/sign-in.html")
 	t.Execute(w, nil)
 }
 
 func signUpPageHandler(w http.ResponseWriter, _ *http.Request) {
-	t, _ := template.ParseFiles("public/sign-up.html")
+	t, _ := template.ParseFiles("pages/sign-up.html")
 	t.Execute(w, nil)
 }
 
 func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
-	resp, err := http.Get("http://user-links:5000/api/user-links")
+	resp, err := http.Get("http://user-links:5001/api/user-links")
 
 	if err != nil {
-		http.Error(w, "An error occurred while fetching user links", http.StatusInternalServerError)
-		fmt.Fprintf(os.Stderr, "User links fetch error: %v\n", err)
+		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "User links fetch error: %v\n", err)
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNoContent {
+		temp, _ := template.ParseFiles("pages/user-links.html")
+		temp.Execute(w, nil)
 		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "An error occurred while fetching user links", http.StatusInternalServerError)
-		fmt.Fprintf(os.Stderr, "User links fetch error - bad status: %v\n", err)
+		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "User links fetch error, bad status: %v\n", resp.StatusCode, err)
 		return
 	}
 
@@ -53,16 +66,16 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 	// Endpoint returns array of user links, token bellow read open bracket "[" from json.
 	_, err = dec.Token()
 	if err != nil {
-		http.Error(w, "An error occurred while fetching user links", http.StatusInternalServerError)
-		fmt.Fprintf(os.Stderr, "User links decode error: %v\n", err)
+		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
 		return
 	}
 
 	for dec.More() {
 		var l userLink
 		if err := dec.Decode(&l); err != nil {
-			http.Error(w, "An error occurred while fetching user links", http.StatusInternalServerError)
-			fmt.Fprintf(os.Stderr, "User links decode error: %v\n", err)
+			http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+			serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
 			return
 		}
 		userLinkList = append(userLinkList, l)
@@ -71,20 +84,29 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 	// read closing bracket
 	_, err = dec.Token()
 	if err != nil {
-		http.Error(w, "An error occurred while fetching user links", http.StatusInternalServerError)
-		fmt.Fprintf(os.Stderr, "User links decode error: %v\n", err)
+		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+		serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
 		return
 	}
 
-	temp, _ := template.ParseFiles("public/user-links.html")
+	temp, _ := template.ParseFiles("pages/user-links.html")
 	temp.Execute(w, userLinkList)
 }
 
 func main() {
-	http.HandleFunc("/", homePageHandler)
-	http.HandleFunc("/sign-in", signInPageHandler)
-	http.HandleFunc("/sign-up", signUpPageHandler)
-	http.HandleFunc("/user-links", userLinksPageHandler)
+	serviceLogger = logger.NewAppLogger(serviceName)
+	mux := http.NewServeMux()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	mux.HandleFunc("/", homePageHandler)
+	mux.HandleFunc("/sign-in", signInPageHandler)
+	mux.HandleFunc("/sign-up", signUpPageHandler)
+	mux.HandleFunc("/user-links", userLinksPageHandler)
+
+	srv := http.Server{
+		Addr:    ":8080",
+		Handler: http.NewCrossOriginProtection().Handler(mux),
+	}
+
+	serviceLogger.LogInfo(logger.MessageKey, "Starting web ui service")
+	serviceLogger.LogFatalError(srv.ListenAndServe())
 }
