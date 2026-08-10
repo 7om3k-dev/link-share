@@ -23,7 +23,7 @@ func getOrCreateLogFile() *os.File {
 	t := time.Now()
 	f, err := os.OpenFile(
 		// TODO: consider separate log files like for access logs and other logs
-		fmt.Sprint(logsDirName, t.Format(time.DateOnly), ".txt"),
+		fmt.Sprint(t.Format(time.DateOnly), ".txt"),
 		os.O_APPEND|os.O_CREATE|os.O_WRONLY,
 		0644,
 	)
@@ -45,6 +45,7 @@ func writeToFile(f *os.File, data []byte) {
 func main() {
 	f := getOrCreateLogFile()
 
+	// TODO: configure server and add handlers
 	writeToFile(f, []byte("hello there\n"))
 	writeToFile(f, []byte("how are you?\n"))
 
@@ -52,5 +53,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-// TODO: configure server and add handlers
