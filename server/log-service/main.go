@@ -61,8 +61,6 @@ func logHandler(w http.ResponseWriter, r *http.Request) {
 		slog.String("Req host", r.Host),
 	)
 
-	logger.Info(r.RequestURI)
-
 	switch r.Method {
 	case "POST":
 		handleLog(logger, w, r)
@@ -72,25 +70,15 @@ func logHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = f.Close(); err != nil {
-		log.Fatal(err)
+		logger.Error(fmt.Sprintf("Error closing log file: %v", err))
 	}
 }
 
 func handleLog(logger *slog.Logger, w http.ResponseWriter, r *http.Request) {
-	body := r.Body
-
 	/* From documentation
 	The Server will close the request body. The ServeHTTP Handler does not need to.
-	TODO: to check if body close defer should be removed
 	*/
-	defer func() {
-		if err := body.Close(); err != nil {
-			logger.Error(
-				fmt.Sprintf("Error closing request body: %v", err),
-				slog.String("service-name", serviceName),
-			)
-		}
-	}()
+	body := r.Body
 
 	b, err := io.ReadAll(body)
 	if err != nil {
