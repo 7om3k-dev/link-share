@@ -3,20 +3,20 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
-	"github.com/7om3k/link-share/applib/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const serviceName = "user-links"
 
 var (
-	db            *pgxpool.Pool
-	serviceLogger *logger.Logger
+	db *pgxpool.Pool
 )
 
 type UserLink struct {
@@ -27,11 +27,9 @@ type UserLink struct {
 }
 
 func main() {
-	serviceLogger = logger.NewAppLogger(serviceName)
-
 	dbUserPassword := os.Getenv("DB_PASSWORD")
 	if dbUserPassword == "" {
-		serviceLogger.LogFatalError(logger.MessageKey, "Unable to connect to database: password not set or empty")
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: password not set or empty")
 	}
 
 	databaseUrl := url.URL{
@@ -43,7 +41,7 @@ func main() {
 
 	poolConfig, err := pgxpool.ParseConfig(databaseUrl.String())
 	if err != nil {
-		serviceLogger.LogFatalError(logger.MessageKey, "Unable to parse database url: "+err.Error())
+		fmt.Fprintf(os.Stderr, "Unable to parse database url: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
@@ -51,15 +49,15 @@ func main() {
 
 	db, err = pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		serviceLogger.LogFatalError(logger.MessageKey, "Unable to create connection pool:"+err.Error())
+		fmt.Fprintf(os.Stderr, "Unable to create connection pool: %v", err)
 	}
 
 	http.HandleFunc("/api/user-links" /* "localhost/api/user-link/{id}" */, func(w http.ResponseWriter, r *http.Request) {
 		userLinkHandler(ctx, w, r)
 	})
 
-	serviceLogger.LogInfo(logger.MessageKey, "Starting server")
-	serviceLogger.LogFatalError(http.ListenAndServe(":5001", nil))
+	log.Print("Starting server")
+	log.Fatal(http.ListenAndServe(":5001", nil))
 }
 
 func userLinkHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -83,7 +81,7 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 	rows, err := db.Query(ctx, "SELECT id, title, description, url FROM link")
 	if err != nil {
 		http.Error(w, "Cannot get user links", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "Query error: "+err.Error())
+		fmt.Fprintf(os.Stderr, "Query error: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -94,7 +92,7 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 
 		if err := rows.Scan(&link.Id, &link.Title, &link.Description, &link.Url); err != nil {
 			http.Error(w, "Cannot serialize user links", http.StatusInternalServerError)
-			serviceLogger.LogError(logger.MessageKey, "Row scan error: "+err.Error())
+			fmt.Fprintf(os.Stderr, "Row scan error: %v", err)
 			return
 		}
 
@@ -103,7 +101,7 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 
 	if rows.Err() != nil {
 		http.Error(w, "Something went wrong while getting user links", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "rows error: "+rows.Err().Error())
+		fmt.Fprintf(os.Stderr, "Rows error: %v", rows.Err())
 		return
 	}
 
@@ -117,7 +115,7 @@ func getUserLinks(ctx context.Context, w http.ResponseWriter, _ *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(links); err != nil {
 		http.Error(w, "Cannot send json with user links", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "JSON encoding error: "+err.Error())
+		fmt.Fprintf(os.Stderr, "JSON encoding error: %v", err)
 		return
 	}
 }

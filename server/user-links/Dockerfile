@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.26.5
+FROM golang:1.27.1
 LABEL authors="github.com/7om3k"
 
 WORKDIR /app
