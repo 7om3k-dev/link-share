@@ -1,3 +1,3 @@
 module github.com/7om3k/link-share/web-ui
 
-go 1.26.5
+go 1.27.1

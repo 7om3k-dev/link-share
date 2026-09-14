@@ -2,17 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"log"
 	"net/http"
-
-	"github.com/7om3k/link-share/applib/logger"
+	"os"
 )
 
 const serviceName = "web-ui"
-
-var (
-	serviceLogger *logger.Logger
-)
 
 func homePageHandler(w http.ResponseWriter, _ *http.Request) {
 	t, _ := template.ParseFiles("pages/home.html")
@@ -34,7 +31,7 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 
 	if err != nil {
 		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "User links fetch error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "User links fetch error: %v\n", err)
 		return
 	}
 
@@ -48,7 +45,7 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 
 	if resp.StatusCode != http.StatusOK {
 		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "User links fetch error, bad status: %v\n", resp.StatusCode, err)
+		fmt.Fprintf(os.Stderr, "User links fetch error, bad status: %v\n", resp.StatusCode)
 		return
 	}
 
@@ -67,7 +64,7 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err = dec.Token()
 	if err != nil {
 		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
+		fmt.Fprintf(os.Stderr, "User links decode error: %v\n", err)
 		return
 	}
 
@@ -75,7 +72,7 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 		var l userLink
 		if err := dec.Decode(&l); err != nil {
 			http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-			serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
+			fmt.Fprintf(os.Stderr, "User links decode error: %v", err)
 			return
 		}
 		userLinkList = append(userLinkList, l)
@@ -85,7 +82,7 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err = dec.Token()
 	if err != nil {
 		http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-		serviceLogger.LogError(logger.MessageKey, "User links decode error: "+err.Error())
+		fmt.Fprintf(os.Stderr, "User links decode error: %v", err)
 		return
 	}
 
@@ -94,7 +91,6 @@ func userLinksPageHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func main() {
-	serviceLogger = logger.NewAppLogger(serviceName)
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", homePageHandler)
@@ -107,6 +103,6 @@ func main() {
 		Handler: http.NewCrossOriginProtection().Handler(mux),
 	}
 
-	serviceLogger.LogInfo(logger.MessageKey, "Starting web ui service")
-	serviceLogger.LogFatalError(srv.ListenAndServe())
+	fmt.Fprintf(os.Stderr, "Starting web ui service")
+	log.Fatal(srv.ListenAndServe())
 }
